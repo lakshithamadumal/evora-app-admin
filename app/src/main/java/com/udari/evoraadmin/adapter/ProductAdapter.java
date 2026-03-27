@@ -16,6 +16,7 @@ import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.bumptech.glide.Glide;
+import com.google.firebase.firestore.FirebaseFirestore; // මේක ඇඩ් කළා
 import com.udari.evoraadmin.R;
 import com.udari.evoraadmin.model.ProductModel;
 
@@ -41,15 +42,19 @@ public class ProductAdapter extends RecyclerView.Adapter<ProductAdapter.ProductV
         ProductModel product = productList.get(position);
 
         holder.tvTitle.setText(product.getTitle());
-        holder.tvPrice.setText(String.format("Rs. %.2f", product.getPrice()));
-        holder.tvStock.setText("Stock: " + product.getStock());
+
+        // Crash වෙන්නේ නැති වෙන්න සරලව Price එක පෙන්වමු
+        holder.tvPrice.setText("Rs. " + product.getPrice());
+
+        // Model එකේ අලුත් නම stockCount නිසා ඒක පාවිච්චි කළා
+        holder.tvStock.setText("Stock: " + product.getStockCount());
 
         Glide.with(holder.itemView.getContext())
                 .load(product.getImageUrl())
                 .placeholder(R.drawable.add)
+                .error(R.drawable.add)
                 .into(holder.ivProduct);
 
-        // Stock Update Dialog එක පෙන්වීම
         holder.btnEdit.setOnClickListener(v -> {
             showUpdateStockDialog(holder.itemView.getContext(), product, position);
         });
@@ -67,24 +72,31 @@ public class ProductAdapter extends RecyclerView.Adapter<ProductAdapter.ProductV
         Button btnCancel = view.findViewById(R.id.btnCancel);
         Button btnUpdate = view.findViewById(R.id.btnUpdate);
 
-        tvCurrent.setText("Current Stock: " + product.getStock());
-        etNew.setText(String.valueOf(product.getStock()));
+        tvCurrent.setText("Current Stock: " + product.getStockCount());
+        etNew.setText(String.valueOf(product.getStockCount()));
 
         btnCancel.setOnClickListener(v -> dialog.dismiss());
 
         btnUpdate.setOnClickListener(v -> {
-            String newStockStr = etNew.getText().toString();
+            String newStockStr = etNew.getText().toString().trim();
             if (!newStockStr.isEmpty()) {
                 int newStock = Integer.parseInt(newStockStr);
 
-                // Local update
-                product.setStock(newStock);
-                notifyItemChanged(position);
-
-                // TODO: Firestore Update Logic here
+                // 1. Firestore එක Update කිරීම (Real-time)
+                FirebaseFirestore.getInstance().collection("Products")
+                        .document(product.getProductId()) // Model එකේ අලුත් නම productId
+                        .update("stockCount", newStock) // Database එකේ Key එක stockCount
+                        .addOnSuccessListener(aVoid -> {
+                            // 2. Local Update (Screen එකේ පෙන්වන්න)
+                            product.setStockCount(newStock);
+                            notifyItemChanged(position);
+                            Toast.makeText(context, "Stock Updated in Cloud! ✅", Toast.LENGTH_SHORT).show();
+                        })
+                        .addOnFailureListener(e -> {
+                            Toast.makeText(context, "Update Failed! ❌", Toast.LENGTH_SHORT).show();
+                        });
 
                 dialog.dismiss();
-                Toast.makeText(context, "Stock Updated Successfully!", Toast.LENGTH_SHORT).show();
             }
         });
 
@@ -93,7 +105,7 @@ public class ProductAdapter extends RecyclerView.Adapter<ProductAdapter.ProductV
 
     @Override
     public int getItemCount() {
-        return productList.size();
+        return productList != null ? productList.size() : 0;
     }
 
     static class ProductViewHolder extends RecyclerView.ViewHolder {

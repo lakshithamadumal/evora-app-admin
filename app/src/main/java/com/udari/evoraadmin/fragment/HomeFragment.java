@@ -26,64 +26,59 @@ public class HomeFragment extends Fragment {
         binding = FragmentHomeBinding.inflate(inflater, container, false);
         db = FirebaseFirestore.getInstance();
 
-        // Dashboard එකේ දත්ත Load කිරීම
         loadDashboardStats();
 
         return binding.getRoot();
     }
 
     private void loadDashboardStats() {
-        // 1. Total Users ගණන බැලීම
+        // 1. Total Users
         db.collection("Users").addSnapshotListener((value, error) -> {
-            if (value != null) {
+            // binding != null කියන එක අනිවාර්යයි
+            if (binding != null && value != null) {
                 binding.tvTotalUsers.setText(String.valueOf(value.size()));
             }
         });
 
-        // 2. Orders, Earnings සහ Today's Stats බැලීම
+        // 2. Orders, Earnings සහ Stats
         db.collection("Orders").addSnapshotListener((value, error) -> {
-            if (value != null) {
+            if (binding != null && value != null) {
                 double totalEarnings = 0;
                 double todayEarnings = 0;
                 int pendingCount = 0;
                 int todayOrdersCount = 0;
 
-                // අද දවස ලබා ගැනීම (Format: 2024-05-20)
                 String todayDate = new SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(new Date());
 
                 for (DocumentSnapshot doc : value.getDocuments()) {
-                    // Firestore එකේ තියෙන Field Names නිවැරදිද බලන්න
                     Double amount = doc.getDouble("totalAmount");
                     String status = doc.getString("status");
                     String date = doc.getString("orderDate");
 
                     if (amount != null) {
                         totalEarnings += amount;
-
-                        // අද දවසේ දත්ත වෙන් කර ගැනීම
                         if (date != null && date.equals(todayDate)) {
                             todayEarnings += amount;
                             todayOrdersCount++;
                         }
                     }
 
-                    // අලුත් (Paid) orders පමණක් ගණනය කිරීම
                     if ("Paid".equals(status)) {
                         pendingCount++;
                     }
                 }
 
-                // UI එක Update කිරීම
-                binding.tvTotalEarnings.setText(String.format("Rs. %.2f", totalEarnings));
-                binding.tvTodayEarnings.setText(String.format("Rs. %.2f", todayEarnings));
+                // UI Update කරනකොටත් binding check එක ඇතුළේම කරන්න
+                binding.tvTotalEarnings.setText(String.format(Locale.getDefault(), "Rs. %.2f", totalEarnings));
+                binding.tvTodayEarnings.setText(String.format(Locale.getDefault(), "Rs. %.2f", todayEarnings));
                 binding.tvTodayOrders.setText(String.valueOf(todayOrdersCount));
                 binding.tvPendingOrders.setText(String.valueOf(pendingCount));
             }
         });
 
-        // 3. Total Products ගණන බැලීම
+        // 3. Total Products
         db.collection("Products").addSnapshotListener((value, error) -> {
-            if (value != null) {
+            if (binding != null && value != null) {
                 binding.tvTotalProducts.setText(String.valueOf(value.size()));
             }
         });
@@ -92,6 +87,7 @@ public class HomeFragment extends Fragment {
     @Override
     public void onDestroyView() {
         super.onDestroyView();
+        // Fragment එක screen එකෙන් අයින් වෙනකොට binding එක null වෙනවා
         binding = null;
     }
 }
