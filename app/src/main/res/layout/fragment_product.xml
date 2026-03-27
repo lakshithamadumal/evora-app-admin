@@ -37,7 +37,6 @@
                     android:layout_width="match_parent"
                     android:layout_height="50dp"
                     android:hint="Product Title"
-                    android:background="@drawable/home"
                     android:paddingHorizontal="12dp"
                     android:layout_marginBottom="12dp"/>
 
@@ -47,7 +46,6 @@
                     android:layout_height="50dp"
                     android:hint="Price (Rs.)"
                     android:inputType="numberDecimal"
-                    android:background="@drawable/home"
                     android:paddingHorizontal="12dp"
                     android:layout_marginBottom="12dp"/>
 
@@ -57,7 +55,6 @@
                     android:layout_height="50dp"
                     android:hint="Initial Stock Count"
                     android:inputType="number"
-                    android:background="@drawable/home"
                     android:paddingHorizontal="12dp"
                     android:layout_marginBottom="12dp"/>
 
