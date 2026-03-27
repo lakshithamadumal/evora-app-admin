@@ -8,11 +8,17 @@ import android.view.ViewGroup;
 import android.widget.Button;
 import android.widget.TextView;
 import android.widget.Toast;
+
 import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
+
+import com.google.firebase.firestore.FirebaseFirestore;
 import com.udari.evoraadmin.R;
 import com.udari.evoraadmin.model.OrderModel;
+
 import java.util.List;
+import java.util.Locale;
+import java.util.Map;
 
 public class OrderAdapter extends RecyclerView.Adapter<OrderAdapter.OrderViewHolder> {
 
@@ -32,15 +38,26 @@ public class OrderAdapter extends RecyclerView.Adapter<OrderAdapter.OrderViewHol
     @Override
     public void onBindViewHolder(@NonNull OrderViewHolder holder, int position) {
         OrderModel order = orderList.get(position);
-        holder.name.setText(order.userName);
-        holder.status.setText(order.status);
-        holder.products.setText(order.productsSummary);
-        holder.total.setText(String.format("Total: Rs. %.2f", order.total));
 
-        // Details පෙන්වීම
-        holder.itemView.setOnClickListener(v -> showDetailsDialog(holder.itemView.getContext(), order));
+        holder.name.setText(order.getCustomerName());
+        holder.status.setText(order.getStatus());
+        holder.total.setText("Total: Rs. " + order.getTotalAmount());
 
-        // Status Update කිරීම
+        // ItemsSummary එකක් හදමු
+        if (order.getItems() != null && !order.getItems().isEmpty()) {
+            StringBuilder sb = new StringBuilder();
+            for (Map<String, Object> item : order.getItems()) {
+                sb.append(item.get("productTitle")).append(", ");
+            }
+            holder.products.setText(sb.toString());
+        } else {
+            holder.products.setText("Date: " + order.getFormattedDate());
+        }
+
+        // Status Click -> Details Dialog
+        holder.status.setOnClickListener(v -> showDetailsDialog(holder.itemView.getContext(), order));
+
+        // Update Button
         holder.btnUpdate.setOnClickListener(v -> showStatusUpdateDialog(holder.itemView.getContext(), order, position));
     }
 
@@ -55,10 +72,11 @@ public class OrderAdapter extends RecyclerView.Adapter<OrderAdapter.OrderViewHol
         TextView address = view.findViewById(R.id.tvDetailAddress);
         Button close = view.findViewById(R.id.btnCloseDetail);
 
-        date.setText("Date: " + order.date);
-        phone.setText("Phone: " + order.phone);
-        city.setText("City: " + order.city);
-        address.setText("Address: " + order.address);
+        // මෙතනත් getTimestamp() පාවිච්චි කරන්න
+        date.setText("Date: " + order.getFormattedDate());
+        phone.setText("Phone: " + order.getCustomerPhone());
+        city.setText("City: " + order.getDeliveryCity());
+        address.setText("Address: " + order.getDeliveryAddress());
 
         AlertDialog dialog = builder.create();
         close.setOnClickListener(v -> dialog.dismiss());
@@ -66,24 +84,36 @@ public class OrderAdapter extends RecyclerView.Adapter<OrderAdapter.OrderViewHol
     }
 
     private void showStatusUpdateDialog(Context context, OrderModel order, int position) {
-        String[] options = {"Paid", "Processing", "Delivered", "Received"};
+        String[] options = {"Paid", "Processing", "Shipped", "Delivered", "Cancelled"};
+
         AlertDialog.Builder builder = new AlertDialog.Builder(context);
         builder.setTitle("Update Order Status");
         builder.setItems(options, (dialog, which) -> {
-            order.status = options[which];
-            notifyItemChanged(position);
-            // TODO: Firestore update logic
-            Toast.makeText(context, "Status Updated to " + options[which], Toast.LENGTH_SHORT).show();
+            String selectedStatus = options[which];
+
+            // Firestore Update Logic
+            FirebaseFirestore.getInstance().collection("Orders")
+                    .document(order.getOrderId()) // Document ID එක OrderId එකම විය යුතුයි
+                    .update("status", selectedStatus)
+                    .addOnSuccessListener(aVoid -> {
+                        order.setStatus(selectedStatus);
+                        notifyItemChanged(position);
+                        Toast.makeText(context, "Status Updated to " + selectedStatus, Toast.LENGTH_SHORT).show();
+                    })
+                    .addOnFailureListener(e -> Toast.makeText(context, "Update Failed!", Toast.LENGTH_SHORT).show());
         });
         builder.show();
     }
 
     @Override
-    public int getItemCount() { return orderList.size(); }
+    public int getItemCount() {
+        return orderList != null ? orderList.size() : 0;
+    }
 
     static class OrderViewHolder extends RecyclerView.ViewHolder {
         TextView name, status, products, total;
         Button btnUpdate;
+
         public OrderViewHolder(@NonNull View itemView) {
             super(itemView);
             name = itemView.findViewById(R.id.tvOrderUserName);

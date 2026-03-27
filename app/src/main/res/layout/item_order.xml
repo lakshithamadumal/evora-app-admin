@@ -33,13 +33,13 @@
                 android:id="@+id/tvOrderStatus"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Processing"
+                android:background="#FFF3E0"
                 android:paddingHorizontal="10dp"
                 android:paddingVertical="4dp"
-                android:background="#FFF3E0"
+                android:text="Processing"
                 android:textColor="#FF9800"
-                android:textStyle="bold"
-                android:textSize="12sp"/>
+                android:textSize="12sp"
+                android:textStyle="bold" />
         </LinearLayout>
 
         <TextView
