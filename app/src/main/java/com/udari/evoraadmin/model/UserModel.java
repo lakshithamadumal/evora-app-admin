@@ -1,29 +1,49 @@
 package com.udari.evoraadmin.model;
 
 public class UserModel {
-    private String name, mobile, city;
+    private String name, phoneNumber, city;
     private int orderCount;
 
-
+    // 1. Firebase එකට අනිවාර්යයෙන්ම empty constructor එකක් ඕනේ
     public UserModel() {
     }
 
-    public UserModel(String name, String mobile, String city, int orderCount) {
+    public UserModel(String name, String phoneNumber, String city, int orderCount) {
         this.name = name;
-        this.mobile = mobile;
+        this.phoneNumber = phoneNumber;
         this.city = city;
         this.orderCount = orderCount;
     }
 
-    // Getters
-    public String getName() { return name; }
-    public String getMobile() { return mobile; }
-    public String getCity() { return city; }
-    public int getOrderCount() { return orderCount; }
+    public String getName() {
+        return name;
+    }
 
+    public String getPhoneNumber() {
+        return phoneNumber;
+    }
 
-    public void setName(String name) { this.name = name; }
-    public void setMobile(String mobile) { this.mobile = mobile; }
-    public void setCity(String city) { this.city = city; }
-    public void setOrderCount(int orderCount) { this.orderCount = orderCount; }
+    public String getCity() {
+        return city;
+    }
+
+    public int getOrderCount() {
+        return orderCount;
+    }
+
+    public void setName(String name) {
+        this.name = name;
+    }
+
+    public void setPhoneNumber(String phoneNumber) {
+        this.phoneNumber = phoneNumber;
+    }
+
+    public void setCity(String city) {
+        this.city = city;
+    }
+
+    public void setOrderCount(int orderCount) {
+        this.orderCount = orderCount;
+    }
 }

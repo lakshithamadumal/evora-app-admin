@@ -29,7 +29,7 @@ public class UserAdapter extends RecyclerView.Adapter<UserAdapter.UserViewHolder
     public void onBindViewHolder(@NonNull UserViewHolder holder, int position) {
         UserModel user = userList.get(position);
         holder.name.setText(user.getName());
-        holder.mobile.setText("Mobile: " + user.getMobile());
+        holder.phoneNumber.setText("phoneNumber: " + user.getPhoneNumber());
         holder.city.setText("City: " + user.getCity());
         holder.orders.setText("Orders: " + user.getOrderCount());
     }
@@ -40,11 +40,11 @@ public class UserAdapter extends RecyclerView.Adapter<UserAdapter.UserViewHolder
     }
 
     static class UserViewHolder extends RecyclerView.ViewHolder {
-        TextView name, mobile, city, orders;
+        TextView name, phoneNumber, city, orders;
         public UserViewHolder(@NonNull View itemView) {
             super(itemView);
             name = itemView.findViewById(R.id.tvUserName);
-            mobile = itemView.findViewById(R.id.tvUserMobile);
+            phoneNumber = itemView.findViewById(R.id.tvUserMobile);
             city = itemView.findViewById(R.id.tvUserCity);
             orders = itemView.findViewById(R.id.tvOrderCount);
         }
