@@ -1,10 +1,12 @@
 package com.udari.evoraadmin.model;
 
 public class UserModel {
-    private String name, phoneNumber, city;
+    private String id;
+    private String name;
+    private String phoneNumber;
+    private String city;
     private int orderCount;
 
-    // 1. Firebase එකට අනිවාර්යයෙන්ම empty constructor එකක් ඕනේ
     public UserModel() {
     }
 
@@ -13,6 +15,14 @@ public class UserModel {
         this.phoneNumber = phoneNumber;
         this.city = city;
         this.orderCount = orderCount;
+    }
+
+    public String getId() {
+        return id;
+    }
+
+    public void setId(String id) {
+        this.id = id;
     }
 
     public String getName() {

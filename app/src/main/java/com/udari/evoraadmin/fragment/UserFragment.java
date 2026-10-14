@@ -66,6 +66,7 @@ public class UserFragment extends Fragment {
                 for (DocumentSnapshot doc : value.getDocuments()) {
                     UserModel user = doc.toObject(UserModel.class);
                     if (user != null) {
+                        user.setId(doc.getId());
                         userList.add(user);
                     }
                 }

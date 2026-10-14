@@ -8,6 +8,7 @@ import android.widget.TextView;
 import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
 
+import com.google.firebase.firestore.FirebaseFirestore;
 import com.udari.evoraadmin.R;
 import com.udari.evoraadmin.model.UserModel;
 
@@ -16,6 +17,7 @@ import java.util.List;
 public class UserAdapter extends RecyclerView.Adapter<UserAdapter.UserViewHolder> {
 
     private final List<UserModel> userList;
+    private final FirebaseFirestore db = FirebaseFirestore.getInstance();
 
     public UserAdapter(List<UserModel> userList) {
         this.userList = userList;
@@ -41,7 +43,19 @@ public class UserAdapter extends RecyclerView.Adapter<UserAdapter.UserViewHolder
             String city = user.getCity() != null ? user.getCity() : "N/A";
             holder.city.setText("City: " + city);
 
-            holder.orders.setText("Orders: " + user.getOrderCount());
+            if (user.getId() != null) {
+                db.collection("Orders")
+                        .whereEqualTo("userId", user.getId())
+                        .addSnapshotListener((value, error) -> {
+                            if (error == null && value != null) {
+                                holder.orders.setText("Orders: " + value.size());
+                            } else {
+                                holder.orders.setText("Orders: " + user.getOrderCount());
+                            }
+                        });
+            } else {
+                holder.orders.setText("Orders: " + user.getOrderCount());
+            }
         }
     }
 
