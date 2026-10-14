@@ -15,11 +15,13 @@ import android.widget.Toast;
 import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 import androidx.fragment.app.Fragment;
 import androidx.recyclerview.widget.LinearLayoutManager;
 
 import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.FirebaseFirestore;
+import com.google.firebase.firestore.ListenerRegistration;
 import com.udari.evoraadmin.adapter.ProductAdapter;
 import com.udari.evoraadmin.databinding.FragmentProductBinding;
 import com.udari.evoraadmin.model.ProductModel;
@@ -47,6 +49,7 @@ public class ProductFragment extends Fragment {
     private List<ProductModel> productList;
     private ProductAdapter adapter;
     private FirebaseFirestore db;
+    private ListenerRegistration productsListener;
     private Uri imageUri;
     private ProgressDialog progressDialog;
     private final String IMGBB_API_KEY = "5cf3fbf76d4e5552e63ff0b168bcca79";
@@ -59,6 +62,13 @@ public class ProductFragment extends Fragment {
         progressDialog = new ProgressDialog(getContext());
         progressDialog.setMessage("Saving Product...");
         progressDialog.setCancelable(false);
+
+        return binding.getRoot();
+    }
+
+    @Override
+    public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
+        super.onViewCreated(view, savedInstanceState);
 
         setupRecyclerView();
         loadProductsFromFirestore();
@@ -78,8 +88,14 @@ public class ProductFragment extends Fragment {
                 }
             }
         });
+    }
 
-        return binding.getRoot();
+    private void setupRecyclerView() {
+        productList = new ArrayList<>();
+        adapter = new ProductAdapter(productList);
+        binding.rvProducts.setLayoutManager(new LinearLayoutManager(requireContext()));
+        binding.rvProducts.setNestedScrollingEnabled(false);
+        binding.rvProducts.setAdapter(adapter);
     }
 
     private boolean validateFields() {
@@ -107,16 +123,17 @@ public class ProductFragment extends Fragment {
             InputStream inputStream = requireContext().getContentResolver().openInputStream(uri);
             byte[] bytes = new byte[inputStream.available()];
             inputStream.read(bytes);
-            String base64Image = android.util.Base64.encodeToString(bytes, android.util.Base64.DEFAULT);
+            inputStream.close();
 
             OkHttpClient client = new OkHttpClient();
             RequestBody requestBody = new MultipartBody.Builder()
                     .setType(MultipartBody.FORM)
-                    .addFormDataPart("image", base64Image)
+                    .addFormDataPart("key", IMGBB_API_KEY)
+                    .addFormDataPart("image", android.util.Base64.encodeToString(bytes, android.util.Base64.NO_WRAP))
                     .build();
 
             Request request = new Request.Builder()
-                    .url("https://api.imgbb.com/1/upload?key=" + IMGBB_API_KEY)
+                    .url("https://api.imgbb.com/1/upload")
                     .post(requestBody)
                     .build();
 
@@ -124,21 +141,31 @@ public class ProductFragment extends Fragment {
                 @Override
                 public void onFailure(@NonNull Call call, @NonNull IOException e) {
                     closeDialog();
-                    showToast("Upload Failed!");
+                    showToast("Upload Failed: " + e.getMessage());
                 }
 
                 @Override
                 public void onResponse(@NonNull Call call, @NonNull Response response) throws IOException {
                     if (response.isSuccessful() && response.body() != null) {
                         try {
-                            JSONObject jsonObject = new JSONObject(response.body().string());
+                            String resString = response.body().string();
+                            JSONObject jsonObject = new JSONObject(resString);
                             String url = jsonObject.getJSONObject("data").getString("url");
                             if (isAdded()) requireActivity().runOnUiThread(() -> saveProductToFirestore(url));
-                        } catch (Exception e) { closeDialog(); }
-                    } else { closeDialog(); }
+                        } catch (Exception e) {
+                            closeDialog();
+                            showToast("JSON Parsing Error");
+                        }
+                    } else {
+                        closeDialog();
+                        showToast("API Error Code: " + response.code());
+                    }
                 }
             });
-        } catch (Exception e) { closeDialog(); }
+        } catch (Exception e) {
+            closeDialog();
+            showToast("Error: " + e.getMessage());
+        }
     }
 
     private void saveProductToFirestore(String uploadedImageUrl) {
@@ -150,37 +177,46 @@ public class ProductFragment extends Fragment {
 
             db.collection("Products").get().addOnCompleteListener(task -> {
                 if (task.isSuccessful() && isAdded()) {
-                    String customId = "P" + (task.getResult().size() + 1);
+                    // P1, P2, P3... විදිහට Document ID එක auto generate වෙනවා[cite: 5]
+                    int nextIdNumber = task.getResult().size() + 1;
+                    String customId = "P" + nextIdNumber;
 
                     Map<String, Object> product = new HashMap<>();
-                    product.put("productId", customId);
-                    product.put("title", title);
-                    product.put("description", description);
-                    product.put("price", price);
-                    product.put("stockCount", stockCount);
-                    product.put("status", true);
-                    product.put("imageUrl", uploadedImageUrl);
+                    product.put("productId", customId); // Database එකේ ඇති field names සමඟ ගැලපේ[cite: 5]
+                    product.put("title", title); // Database එකේ ඇති field names සමඟ ගැලපේ[cite: 5]
+                    product.put("description", description); // Database එකේ ඇති field names සමඟ ගැලපේ[cite: 5]
+                    product.put("price", price); // Database එකේ ඇති field names සමඟ ගැලපේ[cite: 5]
+                    product.put("stockCount", stockCount); // Database එකේ ඇති field names සමඟ ගැලපේ[cite: 5]
+                    product.put("status", true); // Database එකේ ඇති field names සමඟ ගැලපේ[cite: 5]
+                    product.put("imageUrl", uploadedImageUrl); // Database එකේ ඇති field names සමඟ ගැලපේ[cite: 5]
 
                     db.collection("Products").document(customId).set(product)
                             .addOnSuccessListener(aVoid -> {
                                 closeDialog();
                                 showToast("Added: " + customId);
                                 clearFields();
-                                loadProductsFromFirestore(); // මෙතනදී තමයි crash වෙන්න ඉඩ තියෙන්නේ
                             })
                             .addOnFailureListener(e -> closeDialog());
-                } else { closeDialog(); }
+                } else {
+                    closeDialog();
+                }
             });
-        } catch (Exception e) { closeDialog(); }
+        } catch (Exception e) {
+            closeDialog();
+        }
     }
 
     private void loadProductsFromFirestore() {
-        db.collection("Products").get().addOnSuccessListener(queryDocumentSnapshots -> {
-            if (isAdded() && binding != null) {
+        productsListener = db.collection("Products").addSnapshotListener((value, error) -> {
+            if (error != null) {
+                Log.e("FirestoreError", error.getMessage());
+                return;
+            }
+
+            if (value != null && isAdded() && binding != null) {
                 productList.clear();
-                for (DocumentSnapshot doc : queryDocumentSnapshots.getDocuments()) {
+                for (DocumentSnapshot doc : value.getDocuments()) {
                     try {
-                        // Crash එක වළක්වන්න ආරක්ෂිතව දත්ත ගමු
                         ProductModel product = doc.toObject(ProductModel.class);
                         if (product != null) productList.add(product);
                     } catch (Exception e) {
@@ -189,14 +225,7 @@ public class ProductFragment extends Fragment {
                 }
                 adapter.notifyDataSetChanged();
             }
-        }).addOnFailureListener(e -> Log.e("Firestore", "Load failed"));
-    }
-
-    private void setupRecyclerView() {
-        productList = new ArrayList<>();
-        adapter = new ProductAdapter(productList);
-        binding.rvProducts.setLayoutManager(new LinearLayoutManager(getContext()));
-        binding.rvProducts.setAdapter(adapter);
+        });
     }
 
     private void clearFields() {
@@ -223,6 +252,9 @@ public class ProductFragment extends Fragment {
     @Override
     public void onDestroyView() {
         super.onDestroyView();
+        if (productsListener != null) {
+            productsListener.remove();
+        }
         binding = null;
     }
 }
