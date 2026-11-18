@@ -180,7 +180,7 @@ public class ProductFragment extends Fragment {
                 productList.clear();
                 for (DocumentSnapshot doc : queryDocumentSnapshots.getDocuments()) {
                     try {
-                        // Crash එක වළක්වන්න ආරක්ෂිතව දත්ත ගමු
+
                         ProductModel product = doc.toObject(ProductModel.class);
                         if (product != null) productList.add(product);
                     } catch (Exception e) {
